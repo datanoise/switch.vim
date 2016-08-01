@@ -108,7 +108,8 @@ function! switch#mapping#Replace(match) dict
       let sub_replacement = escape(sub_replacement, '/&')
 
       silent! foldopen!
-      exe 's/'.pattern.'/'.sub_replacement.'/ge'
+      " exe 's/'.pattern.'/'.sub_replacement.'/ge'
+      call setline(".", substitute(getline("."), pattern, sub_replacement, "ge"))
 
       " length of the line may have changed, adjust
       let delta += col('$') - last_column
@@ -118,7 +119,8 @@ function! switch#mapping#Replace(match) dict
     let pattern     = escape(pattern, '/')
     let replacement = escape(replacement, '/&')
 
-    exe 's/'.pattern.'/'.replacement.'/'
+    " exe 's/'.pattern.'/'.replacement.'/'
+    call setline(".", substitute(getline("."), pattern, replacement, ""))
   endif
 endfunction
 
