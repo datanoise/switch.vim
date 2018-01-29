@@ -75,6 +75,10 @@ let g:switch_builtins =
       \       '\(\k\+\))': ':\1]',
       \     },
       \   },
+      \   'ruby_fetch': {
+      \     '\(\k\+\)\[\(.\{-}\)\]': '\1.fetch(\2)',
+      \     '\(\k\+\)\.fetch(\(.\{-}\))': '\1[\2]',
+      \   },
       \   'rspec_should': ['should ', 'should_not '],
       \   'rspec_expect': {
       \     '\(expect(.*)\)\.to ':     '\1.not_to ',
@@ -109,6 +113,18 @@ let g:switch_builtins =
       \     'function \(\k\+\)(':              'var \1 = function(',
       \     '\%(var \)\=\(\k\+\) = function(': 'function \1(',
       \   },
+      \   'javascript_arrow_function': {
+      \     'function\s*()\s*{':                        '() => {',
+      \     'function\s*(\([^()]\{-},[^()]\{-}\))\s*{': '(\1) => {',
+      \     'function\s*(\(\k\+\))\s*{':                '\1 => {',
+      \     '(\([^()]\{-}\))\s*=>\s*{':                 'function(\1) {',
+      \     '\(\k\+\)\s*=>\s*{':                        'function(\1) {',
+      \   },
+      \   'javascript_es6_declarations': {
+      \     '\<var\s\+': 'let ',
+      \     '\<let\s\+': 'const ',
+      \     '\<const\s\+': 'let ',
+      \   },
       \   'coffee_arrow': {
       \     '^\(.*\)->': '\1=>',
       \     '^\(.*\)=>': '\1->',
@@ -134,6 +150,32 @@ let g:switch_builtins =
       \     '[sf"]\@<!"""\(.\{-}\)"""':           's"""\1"""',
       \     's"""\(.\{-}\)"""':                   'f"""\1"""',
       \     'f"""\(.\{-}\)"""':                   '"\1"',
+      \   },
+      \   'elixir_list_shorthand': {
+      \     '\[\%(\k\|[''", ]\)\+\]': {
+      \       '\[':                    '\~w(',
+      \       '[''"]\(\k\+\)[''"],\=': '\1',
+      \       ']':                     ')',
+      \     },
+      \     '\~w(\%(\k\|\s\)\+)a': {
+      \       '\~w(':      '[',
+      \       '\(\k\+\) ': ':\1, ',
+      \       '\(\k\+\))a': ':\1]',
+      \     },
+      \     '\~w(\%(\k\|\s\)\+)a\@!': {
+      \       '\~w(':      '[',
+      \       '\(\k\+\) ': '"\1", ',
+      \       '\(\k\+\))': '"\1"]',
+      \     },
+      \     '\[\%(\k\|[:, ]\)\+\]': {
+      \       '\[':           '\~w(',
+      \       ':\(\k\+\),\=': '\1',
+      \       ']':            ')a',
+      \     },
+      \   },
+      \   'rust_void_typecheck': {
+      \     '\(let\s*\%(mut\s*\)\=\k\+\) = ': '\1: () = ',
+      \     '\(let\s*\%(mut\s*\)\=\k\+\): () = ': '\1 = ',
       \   },
       \ }
 
@@ -181,6 +223,7 @@ autocmd FileType ruby let b:switch_definitions =
       \   g:switch_builtins.ruby_string,
       \   g:switch_builtins.ruby_short_blocks,
       \   g:switch_builtins.ruby_array_shorthand,
+      \   g:switch_builtins.ruby_fetch,
       \ ]
 
 autocmd FileType cpp let b:switch_definitions =
@@ -191,6 +234,8 @@ autocmd FileType cpp let b:switch_definitions =
 autocmd FileType javascript let b:switch_definitions =
       \ [
       \   g:switch_builtins.javascript_function,
+      \   g:switch_builtins.javascript_arrow_function,
+      \   g:switch_builtins.javascript_es6_declarations,
       \ ]
 
 autocmd FileType coffee let b:switch_definitions =
@@ -208,41 +253,37 @@ autocmd FileType scala let b:switch_definitions =
       \ [
       \   g:switch_builtins.scala_string,
       \ ]
+autocmd FileType gitrebase let b:switch_definitions =
+      \ [
+      \   [ 'pick', 'fixup', 'reword', 'edit', 'squash', 'exec', 'drop' ],
+      \   { '^p ': 'fixup ' },
+      \   { '^f ': 'reword ' },
+      \   { '^r ': 'edit ' },
+      \   { '^e ': 'squash ' },
+      \   { '^s ': 'exec ' },
+      \   { '^x ': 'drop ' },
+      \   { '^d ': 'pick ' },
+      \ ]
+autocmd FileType elixir let b:switch_definitions =
+      \ [
+      \   g:switch_builtins.ruby_string,
+      \   g:switch_builtins.elixir_list_shorthand
+      \ ]
+autocmd FileType rust let b:switch_definitions =
+      \ [
+      \   g:switch_builtins.rust_void_typecheck,
+      \ ]
 
 command! Switch call s:Switch()
 function! s:Switch()
-  let definitions = s:GetDefinitions()
-  call switch#Switch(definitions, {})
+  silent call switch#Switch()
   silent! call repeat#set(":Switch\<cr>")
 endfunction
 
 command! SwitchReverse call s:SwitchReverse()
 function! s:SwitchReverse()
-  let definitions = s:GetDefinitions()
-  call switch#Switch(definitions, {'reverse': 1})
+  silent call switch#Switch({'reverse': 1})
   silent! call repeat#set(":Switch\<cr>")
-endfunction
-
-function! s:GetDefinitions()
-  let definitions = []
-
-  if exists('g:switch_custom_definitions')
-    call extend(definitions, g:switch_custom_definitions)
-  endif
-
-  if !exists('g:switch_no_builtins')
-    let definitions = extend(definitions, g:switch_definitions)
-  endif
-
-  if exists('b:switch_custom_definitions')
-    call extend(definitions, b:switch_custom_definitions)
-  endif
-
-  if exists('b:switch_definitions') && !exists('b:switch_no_builtins')
-    call extend(definitions, b:switch_definitions)
-  endif
-
-  return definitions
 endfunction
 
 if g:switch_mapping != ''

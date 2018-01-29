@@ -75,6 +75,42 @@ There are three main principles that the substition follows:
    sense to prioritize one over the other. If it's needed to prioritize in a
    different way, the definition list should be redefined by the user.
 
+## Advanced usage
+
+Instead of using the `:Switch` and `:SwitchReverse` commands, you can use the
+autoloaded function `switch#Switch`. Calling it without any arguments is the
+same as calling the `:Switch` command:
+
+``` vim
+:call switch#Switch()
+" equivalent to:
+:Switch
+```
+
+However, you can also call the function with a |Dict| of options. Instead of
+`:SwitchReverse`, you can invoke it with the `reverse` option:
+
+``` vim
+:call switch#Switch({'reverse': 1})
+" or,
+:call switch#Switch({'reverse': v:true})
+" equivalent to:
+:SwitchReverse
+```
+
+The other option you can provide is `definitions` to set an explicit list of
+definitions that are different from the built-ins.
+
+``` vim
+:call switch#Switch({'definitions': list_of_definitions})
+```
+
+The `switch#Switch()` function returns 1 if it succeeded, and 0 if it failed.
+You can use the return value to decide if you'd like to apply some other mapping.
+
+See below in "Customization" for more details and examples on how to write
+use this function.
+
 ## Customization
 
 *Note: for more switches by the community, take a look at the
@@ -211,7 +247,7 @@ let g:variable_style_switch_definitions = [
       \     },
       \   }
       \ ]
-nnoremap + :call switch#Switch(g:variable_style_switch_definitions)<cr>
+nnoremap + :call switch#Switch({'definitions': g:variable_style_switch_definitions})<cr>
 nnoremap - :Switch<cr>
 ```
 
@@ -219,6 +255,24 @@ With this, typing `-` would invoke the built-in switch definitions, while
 typing `+` would switch between camelcase and underscored variable styles.
 This may be particularly useful if you have several clashing switches on
 patterns that match similar things.
+
+### More complicated mappings
+
+By using the `switch#Switch()` function, you can also write more complicated
+mappings that check if a switch succeeded, and apply some fallback if it
+didn't. The function returns 1 for success and 0 for failure.
+
+For example, if you want to switch, or fall back to activating the
+[speeddating](https://github.com/tpope/vim-speeddating) plugin, you could map
+`<c-a>` and `<c-x>` like so:
+
+``` vim
+nnoremap <c-a> :if !switch#Switch() <bar>
+      \ call speeddating#increment() <bar> endif<cr>
+nnoremap <c-x> :if !switch#Switch({'reverse': 1}) <bar>
+      \ call speeddating#decrement() <bar> endif<cr>
+```
+
 
 ## Builtins
 
@@ -375,6 +429,30 @@ definitions with their patterns and replacements, look at the file
 Object* foo = bar.baz;
 Object* foo = bar->baz;
 ```
+### Javascript
+
+* Function definitions:
+  ``` javascript
+  function example(one, two) { }
+  var example = function(one, two) { }
+  ```
+
+* ES6-style arrow functions:
+  ``` javascript
+  var example = function(one, two) { }
+  var example = (one, two) => { }
+  ```
+
+* ES6-style variable declarations:
+  ``` javascript
+  var example
+  let example
+  const example
+  // var -> let
+  // let -> const
+  // const -> let
+  ```
+  Switching to var from const or let is unsupported, since it's assumed to be an unlikely case.
 
 ### Coffeescript arrows
 
@@ -426,6 +504,20 @@ foo = {one: one, two}
   """foo bar"""
   s"""foo bar"""
   f"""foo bar"""
+  ```
+  
+### Git Rebase
+
+* Git Rebase Commands
+  ```
+  pick -> fixup -> reword -> edit -> squash -> drop -> (loops back to pick)
+  p -> fixup
+  f -> reword
+  r -> edit
+  e -> squash
+  s -> exec
+  x -> drop
+  d -> pick
   ```
 
 ## Similar work
